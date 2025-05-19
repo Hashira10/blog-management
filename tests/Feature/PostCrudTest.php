@@ -6,24 +6,42 @@ use App\Models\Post;
 use App\Models\User;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+
 
 class PostCrudTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $user;
-    protected $headers = [];
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Создаем пользователя и аутентифицируемся через Sanctum
+        // Создаем разрешение manage_posts
+        $permission = Permission::firstOrCreate(['name' => 'manage_posts']);
+
+        // Создаем роль Admin и привязываем разрешение
+        $role = Role::firstOrCreate(['name' => 'Admin']);
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+
+        // Создаем пользователя
         $this->user = User::factory()->create();
 
+        // Назначаем пользователю роль Admin
+        $this->user->roles()->syncWithoutDetaching([$role->id]);
+
+        // Аутентифицируемся под этим пользователем
         $this->actingAs($this->user, 'sanctum');
+
+        
     }
 
     public function test_user_can_create_post()
@@ -105,6 +123,7 @@ class PostCrudTest extends TestCase
     public function test_user_cannot_update_others_post()
     {
         $otherUser = User::factory()->create();
+
         $post = Post::factory()->for($otherUser, 'author')->create();
 
         $data = [
@@ -113,7 +132,7 @@ class PostCrudTest extends TestCase
 
         $response = $this->putJson(route('posts.update', $post), $data);
 
-        $response->assertStatus(403); // Запрещено
+        $response->assertStatus(403);
     }
 
     public function test_user_can_delete_own_post()
@@ -130,10 +149,34 @@ class PostCrudTest extends TestCase
     public function test_user_cannot_delete_others_post()
     {
         $otherUser = User::factory()->create();
+
         $post = Post::factory()->for($otherUser, 'author')->create();
 
         $response = $this->deleteJson(route('posts.destroy', $post));
 
         $response->assertStatus(403);
     }
+
+    public function test_user_can_upload_featured_image()
+    {
+        // Создаем поддельное изображение
+        $file = \Illuminate\Http\UploadedFile::fake()->image('test-image.jpg', 800, 600);
+
+        // Отправляем запрос на загрузку изображения
+        $response = $this->postJson('/api/upload-image', [
+            'image' => $file,
+        ]);
+
+        // Проверяем, что запрос выполнен успешно
+        $response->assertStatus(200)
+            ->assertJsonStructure(['url']);
+
+        // Проверяем, что изображение было сохранено в правильной директории
+        Storage::disk('public')->assertExists("featured_images/{$file->hashName()}");
+
+        // Удаляем тестовое изображение после теста
+        Storage::disk('public')->delete("featured_images/{$file->hashName()}");
+    }
+
+
 }

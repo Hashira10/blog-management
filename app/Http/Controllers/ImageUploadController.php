@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Traits\UploadsImages;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ImageUploadController extends Controller
 {
+    use UploadsImages;
+
     public function uploadFeaturedImage(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|max:2048', // max 2MB, проверка что это картинка
+            'image' => 'required|image|max:2048',
         ]);
 
-        $path = $request->file('image')->store('featured_images', 'public');
+        $path = $this->uploadImage($request->file('image'), 'featured_images');
 
-        return response()->json([
-            'url' => Storage::url($path)
-        ]);
+        return response()->json(['url' => $path]);
     }
 }
+

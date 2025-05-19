@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder; // <-- Добавьте это
+use Illuminate\Database\Seeder;
 use App\Models\User;
 
 class DatabaseSeeder extends Seeder
@@ -12,10 +12,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Вызов фабрики пользователей
+        // Создаём тестового пользователя
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Запускаем сидер ролей и разрешений
+        $this->call(RolesAndPermissionsSeeder::class);
     }
 }

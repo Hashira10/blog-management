@@ -5,12 +5,18 @@ namespace App\Providers;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Route;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+
 class RouteServiceProvider extends ServiceProvider
 {
     public const HOME = '/home';
 
     public function boot(): void
     {
+        $this->configureRateLimiting();
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
@@ -20,4 +26,18 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
         });
     }
+
+    protected function configureRateLimiting(): void
+    {
+        // Регистрация лимитера 'api' — стандартный
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+
+        // Регистрация лимитера 'App\Models\User::api', чтобы избежать ошибки в тестах
+        RateLimiter::for('App\Models\User::api', function (Request $request) {
+            return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+    }
 }
+
