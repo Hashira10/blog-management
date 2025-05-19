@@ -25,23 +25,25 @@ class PostCrudTest extends TestCase
     {
         parent::setUp();
 
-        // Создаем разрешение manage_posts
-        $permission = Permission::firstOrCreate(['name' => 'manage_posts']);
+        // Создаем разрешения
+        $permissionPosts = Permission::firstOrCreate(['name' => 'manage_posts']);
+        $permissionCategories = Permission::firstOrCreate(['name' => 'manage_categories']);
 
-        // Создаем роль Admin и привязываем разрешение
+        // Создаем роль Admin и привязываем разрешения
         $role = Role::firstOrCreate(['name' => 'Admin']);
-        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        $role->permissions()->sync([$permissionPosts->id, $permissionCategories->id]);
 
         // Создаем пользователя
         $this->user = User::factory()->create();
 
-        // Назначаем пользователю роль Admin
-        $this->user->roles()->syncWithoutDetaching([$role->id]);
+        // Назначаем роль пользователю
+        $this->user->roles()->sync([$role->id]);
+
+        // Обновляем пользователя из базы, чтобы загрузить роли и разрешения
+        $this->user = $this->user->fresh();
 
         // Аутентифицируемся под этим пользователем
         $this->actingAs($this->user, 'sanctum');
-
-        
     }
 
     public function test_user_can_create_post()
@@ -176,6 +178,102 @@ class PostCrudTest extends TestCase
 
         // Удаляем тестовое изображение после теста
         Storage::disk('public')->delete("featured_images/{$file->hashName()}");
+    }
+
+    public function test_user_can_create_category()
+    {
+        $data = ['name' => 'New Category'];
+
+        $response = $this->postJson(route('categories.store'), $data);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment(['name' => 'New Category']);
+
+        $this->assertDatabaseHas('categories', ['name' => 'New Category']);
+    }
+
+    public function test_user_can_view_category()
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->getJson(route('categories.show', $category));
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['id' => $category->id, 'name' => $category->name]);
+    }
+
+    public function test_user_can_update_category()
+    {
+        $category = Category::factory()->create(['name' => 'Old Name']);
+
+        $data = ['name' => 'Updated Name'];
+
+        $response = $this->putJson(route('categories.update', $category), $data);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['name' => 'Updated Name']);
+
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => 'Updated Name']);
+    }
+
+    public function test_user_can_delete_category()
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->deleteJson(route('categories.destroy', $category));
+
+        $response->assertStatus(204);
+
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
+    }
+
+    // --- Тесты для тегов ---
+
+    public function test_user_can_create_tag()
+    {
+        $data = ['name' => 'New Tag'];
+
+        $response = $this->postJson(route('tags.store'), $data);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment(['name' => 'New Tag']);
+
+        $this->assertDatabaseHas('tags', ['name' => 'New Tag']);
+    }
+
+    public function test_user_can_view_tag()
+    {
+        $tag = Tag::factory()->create();
+
+        $response = $this->getJson(route('tags.show', $tag));
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['id' => $tag->id, 'name' => $tag->name]);
+    }
+
+    public function test_user_can_update_tag()
+    {
+        $tag = Tag::factory()->create(['name' => 'Old Tag']);
+
+        $data = ['name' => 'Updated Tag'];
+
+        $response = $this->putJson(route('tags.update', $tag), $data);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['name' => 'Updated Tag']);
+
+        $this->assertDatabaseHas('tags', ['id' => $tag->id, 'name' => 'Updated Tag']);
+    }
+
+    public function test_user_can_delete_tag()
+    {
+        $tag = Tag::factory()->create();
+
+        $response = $this->deleteJson(route('tags.destroy', $tag));
+
+        $response->assertStatus(204);
+
+        $this->assertDatabaseMissing('tags', ['id' => $tag->id]);
     }
 
 

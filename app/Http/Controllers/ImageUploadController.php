@@ -1,23 +1,17 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Traits\UploadsImages;
-use Illuminate\Http\Request;
+use App\Http\Requests\ImageUploadRequest;
 
 class ImageUploadController extends Controller
 {
     use UploadsImages;
 
-    public function uploadFeaturedImage(Request $request)
+    public function uploadFeaturedImage(ImageUploadRequest $request)
     {
-        $request->validate([
-            'image' => 'required|image|max:2048',
-        ]);
-
         $path = $this->uploadImage($request->file('image'), 'featured_images');
 
         return response()->json(['url' => $path]);
     }
 }
-

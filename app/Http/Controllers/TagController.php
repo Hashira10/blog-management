@@ -1,52 +1,38 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Tag;
-use Illuminate\Http\Request;
+use App\Http\Requests\TagStoreRequest;
+use App\Http\Requests\TagUpdateRequest;
 
 class TagController extends Controller
 {
-    // Получить все теги
     public function index()
     {
         return Tag::all();
     }
 
-    // Создать новый тег
-    public function store(Request $request)
+    public function store(TagStoreRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|unique:tags,name',
-        ]);
-
-        $tag = Tag::create($validated);
+        $tag = Tag::create($request->validated());
 
         return response()->json($tag, 201);
     }
 
-    public function show($id)
+    public function show(Tag $tag)
     {
-        $tag = Tag::findOrFail($id);
         return $tag;
     }
 
-    public function update(Request $request, $id)
+    public function update(TagUpdateRequest $request, Tag $tag)
     {
-        $tag = Tag::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'required|string|unique:tags,name,' . $tag->id,
-        ]);
-
-        $tag->update($validated);
+        $tag->update($request->validated());
 
         return response()->json($tag, 200);
     }
 
-    public function destroy($id)
+    public function destroy(Tag $tag)
     {
-        $tag = Tag::findOrFail($id);
         $tag->delete();
 
         return response()->json(null, 204);

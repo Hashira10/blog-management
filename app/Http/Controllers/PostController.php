@@ -2,44 +2,33 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
-use Illuminate\Http\Request;
+use App\Http\Requests\PostStoreRequest;
+use App\Http\Requests\PostUpdateRequest;
 
 class PostController extends Controller
 {
-
     public function index()
     {
         $posts = Post::with(['categories', 'tags', 'author'])->get();
         return response()->json($posts, 200);
     }
 
-    public function store(Request $request)
+    public function store(PostStoreRequest $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'featured_image' => 'nullable|string',
-            'status' => 'required|in:draft,published',
-            'categories' => 'array',
-            'categories.*' => 'exists:categories,id',
-            'tags' => 'array',
-            'tags.*' => 'exists:tags,id',
-        ]);
-
         $post = Post::create([
-            'title' => $validated['title'],
-            'content' => $validated['content'],
-            'featured_image' => $validated['featured_image'] ?? null,
-            'status' => $validated['status'],
+            'title' => $request->title,
+            'content' => $request->content,
+            'featured_image' => $request->featured_image ?? null,
+            'status' => $request->status,
             'author_id' => auth()->id(),
         ]);
 
-        if (!empty($validated['categories'])) {
-            $post->categories()->sync($validated['categories']);
+        if ($request->filled('categories')) {
+            $post->categories()->sync($request->categories);
         }
 
-        if (!empty($validated['tags'])) {
-            $post->tags()->sync($validated['tags']);
+        if ($request->filled('tags')) {
+            $post->tags()->sync($request->tags);
         }
 
         return response()->json($post->load(['author', 'categories', 'tags']), 201);
@@ -50,32 +39,17 @@ class PostController extends Controller
         return response()->json($post->load(['author', 'categories', 'tags']), 200);
     }
 
-    public function update(Request $request, Post $post)
+    public function update(PostUpdateRequest $request, Post $post)
     {
-        $this->authorize('update', $post);
+        // Авторизация теперь выполняется в PostUpdateRequest::authorize()
+        $post->update($request->validated());
 
-        $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'content' => 'sometimes|required|string',
-            'featured_image' => 'nullable|string',
-            'status' => 'sometimes|required|in:draft,published',
-            'categories' => 'array',
-            'categories.*' => 'exists:categories,id',
-            'tags' => 'array',
-            'tags.*' => 'exists:tags,id',
-        ]);
-        \Log::info('Auth user id:', [auth()->id()]);
-        \Log::info('Post author id:', [$post->author_id]);
-        \Log::info('User is admin:', [auth()->user()->is_admin ?? 'no user']);
-
-        $post->update($validated);
-
-        if (isset($validated['categories'])) {
-            $post->categories()->sync($validated['categories']);
+        if ($request->has('categories')) {
+            $post->categories()->sync($request->categories);
         }
 
-        if (isset($validated['tags'])) {
-            $post->tags()->sync($validated['tags']);
+        if ($request->has('tags')) {
+            $post->tags()->sync($request->tags);
         }
 
         return response()->json($post->load(['author', 'categories', 'tags']), 200);
