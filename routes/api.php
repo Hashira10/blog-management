@@ -30,3 +30,5 @@ Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
 // Можно оставить публичный доступ к списку постов без прав
 Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/tags', [TagController::class, 'index']);

@@ -55,8 +55,8 @@ class PostCrudTest extends TestCase
             'title' => 'Test Post',
             'content' => 'This is a test post content.',
             'status' => 'draft',
-            'categories' => [$category->id],
-            'tags' => [$tag->id],
+            'categories' => [$category->id], // Передаем ID категории
+            'tags' => [$tag->id],           // Передаем ID тега
         ];
 
         $response = $this->postJson(route('posts.store'), $data);
@@ -66,7 +66,15 @@ class PostCrudTest extends TestCase
                 'title' => 'Test Post',
                 'content' => 'This is a test post content.',
                 'status' => 'draft',
-                'author_id' => $this->user->id,
+            ])
+            ->assertJsonFragment([
+                'id' => $this->user->id,      // ID автора
+                'name' => $this->user->name,  // Имя автора
+                'email' => $this->user->email, // Email автора
+            ])
+            ->assertJsonFragment([
+                'categories' => [$category->id], // Проверка ID категории
+                'tags' => [$tag->id],           // Проверка ID тега
             ]);
 
         $this->assertDatabaseHas('posts', [
@@ -74,12 +82,13 @@ class PostCrudTest extends TestCase
             'author_id' => $this->user->id,
         ]);
 
-        $postId = $response->json('id');
+        $postId = $response->json('data.id');
         $post = Post::find($postId);
 
         $this->assertTrue($post->categories->contains($category));
         $this->assertTrue($post->tags->contains($tag));
     }
+
 
     public function test_user_can_view_post()
     {
