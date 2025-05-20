@@ -63,9 +63,13 @@
     docker-compose up --build
     ```
 
-4. **Сборка фронтенда**:
+3. **Выполните миграции и сидеры**:
     ```bash
-    docker-compose exec node npm run build
+    docker-compose exec app php artisan migrate --seed
+    ```
+3. **Выполните тесты**:
+    ```bash
+    docker-compose exec app php artisan test
     ```
 
 6. Откройте браузер и перейдите по адресу:  
